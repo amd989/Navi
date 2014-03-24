@@ -14,8 +14,9 @@ The circuit:
 * 1 Motor (included in stock nav enclosure)
 
 
-TODO
+Todo
 ----
+
 In the meantime this code is a work in progress. Until I test it out completely, is not yet safe to be used (unless you want to contribute)
 I will be updating the code until it replicates the stock functionality as close as possible.
 
