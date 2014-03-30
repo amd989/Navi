@@ -33,11 +33,11 @@ const int AccessoryPin = 6;
 const int LEDPin = 13;
 
 // Thresholds for positions.
-const int OpenPositionMin = 150;
+const int OpenPositionMin = 145;
 const int OpenPositionMax = 166;
 
 const int ClosedPositionMin = 970;
-const int ClosedPositionMax = 988;
+const int ClosedPositionMax = 990;
 
 const int tilt0PositionMin = 195;
 const int tilt0PositionMax = 205;
@@ -187,8 +187,7 @@ void closeLid()
   {
     moveForward();
     newPosition = readSensor();
-    Serial.print("New Position: "); Serial.println(newPosition);
-    //delay(10);
+    //Serial.print("New Position: "); Serial.println(newPosition);
   }
   stopMovement();   
   oldPosition = newPosition;
@@ -205,8 +204,7 @@ void openLid()
   {
     moveBackwards();
     newPosition = readSensor();
-    Serial.print("New Position: "); Serial.println(newPosition);
-    //delay(10);
+    //Serial.print("New Position: "); Serial.println(newPosition);
   }
   stopMovement();
   oldPosition = newPosition; 
@@ -239,19 +237,25 @@ void idle()
     }
     else
     {
-      Serial.println("Accessory Power: OFF ");
-      // The car has been turned off.
-      digitalWrite(LEDPin, LOW);
-      oldLidStatus = lidStatus;      
-      if(lidStatus != ClosedStatus)
+      // Wait a bit to confirm the car is really off instead of being started.      
+      delay(3000);
+      // Read the pin again to confirm the car is off.
+      accessoryState = digitalRead(AccessoryPin);
+      if(accessoryState == LOW)
       {
-        delay(3000);
-        // If car is turned off and lid is open, close lid.
-        closeLid();
-      }
-      Serial.print("Saving current status...");   
-      saveCurrentStatus();
-      Serial.println("Complete.");
+        Serial.println("Accessory Power: OFF ");
+        // The car has been turned off.
+        digitalWrite(LEDPin, LOW);
+        oldLidStatus = lidStatus;      
+        if(lidStatus != ClosedStatus)
+        {        
+          // If car is turned off and lid is open, close lid.
+          closeLid();
+        }
+        Serial.print("Saving current status...");   
+        saveCurrentStatus();
+        Serial.println("Complete."); 
+      }      
     }    
   }  
   oldAccessoryState = accessoryState;    
@@ -261,7 +265,8 @@ void idle()
 /// The lid needs to be opened for the tilting to work.
 void tiltLid()
 {
-  Serial.println("Tilting Lid...");  
+  Serial.println("Tilting Lid...");
+  Serial.print("Current Status: "); Serial.println(lidStatus);  
   int currentStatus = lidStatus;
   int minPosition = 0;
   int maxPosition = 0;
@@ -273,18 +278,21 @@ void tiltLid()
       maxPosition = tilt1PositionMin;
       lidStatus = Tilt1Status;
       movementDirection = ForwardMovement;
+      Serial.print("Moving: "); Serial.println(movementDirection);   
       break;
     case Tilt1Status:
       minPosition = OpenPositionMin;
       maxPosition = tilt2PositionMin;
       lidStatus = Tilt2Status;
       movementDirection = ForwardMovement;
+      Serial.print("Moving: "); Serial.println(movementDirection);
       break;
     case Tilt2Status:
       minPosition = OpenPositionMax;
-      maxPosition = tilt2PositionMax;
+      maxPosition = ClosedPositionMax;
       lidStatus = OpenStatus;
       movementDirection = BackwardsMovement;
+      Serial.print("Moving: "); Serial.println(movementDirection);
       break;  
     case OpenStatus:
     default:
@@ -292,6 +300,7 @@ void tiltLid()
       maxPosition = tilt0PositionMin;
       lidStatus = Tilt0Status;
       movementDirection = ForwardMovement;
+      Serial.print("Moving: "); Serial.println(movementDirection);
       break;
   }
   
@@ -307,12 +316,13 @@ void tiltLid()
       moveBackwards();
     }    
     currentPosition = readSensor();
-    Serial.print("New Position: "); Serial.println(currentPosition);
+    // Serial.print("New Position: "); Serial.println(currentPosition);
   }
-  
   stopMovement();
+  currentPosition = readSensor();
+  Serial.print("New Position: "); Serial.println(currentPosition);
+  Serial.print("New Status: "); Serial.println(lidStatus);  
   oldPosition = currentPosition; 
   Serial.println("Complete");
+  delay(500);
 }
-
-
