@@ -18,198 +18,94 @@
  created 22 March 2014
  by Alejandro Mora
  
+ Revised 24 October 2014
+ By Alejandro Mora
+ 
  */
  
 // Includes
 #include <EEPROM.h>
- 
+#include "functions.h"
+
+#define DEBUG 0
+
 /// Constants.
-const int SensorPin = A0;
-const int ForwardPin = 4;
-const int BackwardsPin = 5;
-const int OpenClosePin = 2;
-const int TiltPin = 3;
-const int AccessoryPin = 6;
-const int LEDPin = 13;
+const int SensorPin       = A0;
+const int ForwardPin      = 4;
+const int BackwardsPin    = 5;
+const int OpenClosePin    = 2;
+const int TiltPin         = 3;
+const int AccessoryPin    = 6;
+const int LEDPin          = 13;
 
-// Thresholds for positions.
-const int OpenPositionMin = 145;
-const int OpenPositionMax = 166;
-
-const int ClosedPositionMin = 970;
-const int ClosedPositionMax = 990;
-
-const int tilt0PositionMin = 195;
-const int tilt0PositionMax = 205;
-
-const int tilt1PositionMin = 255;
-const int tilt1PositionMax = 265;
-
-// 90 degrees
-const int tilt2PositionMin = 330;
-const int tilt2PositionMax = 340;
-
-// Status
-const int ClosedStatus = 0;
-const int OpenStatus = 1;
-const int Tilt0Status = 2;
-const int Tilt1Status = 3;
-const int Tilt2Status = 4;
-
-// Direction of movement
-const int ForwardMovement = 0;
-const int BackwardsMovement = 1;
-
-const int OldLidStatusAddress = 0;
+// Handles Status
+CurrentStatus currentStatus;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Navi: Mazda 6 navigation screen controller");
+  Serial.begin(57600);
+  serialPrintLn("Navi: Mazda 6 navigation screen controller");
+  
+  /// Default status variables.
+  currentStatus.oldLidStatus = ClosedStatus;
+  currentStatus.lidStatus = ClosedStatus;
+  currentStatus.oldAccessoryState = LOW;
+  currentStatus.accessoryState = LOW;
+  currentStatus.openCloseButtonState = HIGH;
+  currentStatus.tiltButtonState = HIGH;
+
+  // Set up pins
   pinMode(ForwardPin, OUTPUT);
   pinMode(BackwardsPin, OUTPUT);  
   pinMode(LEDPin, OUTPUT);
-  pinMode(OpenClosePin, INPUT_PULLUP);  
+  pinMode(OpenClosePin, INPUT_PULLUP);
   pinMode(TiltPin, INPUT_PULLUP);
   pinMode(AccessoryPin, INPUT);
   
-  // loads previous status from memory
-  loadPreviousStatus();
+  // loads previous status from EEPROM memory
+  currentStatus.oldLidStatus = loadPreviousStatus();
   digitalWrite(LEDPin, LOW);
 }
-
-/// Status variables.
-int oldPosition  = 0;
-int oldAccessoryState = LOW;
-int oldLidStatus = ClosedStatus;
-
-int lidStatus = ClosedStatus;
-int openCloseButtonState = HIGH;
-int tiltButtonState = HIGH;
-int accessoryState = LOW;
 
 void loop() {  
   // stop all movement;
   stopMovement();
   
   // Poll ACC State
-  accessoryState = digitalRead(AccessoryPin);  
-  if(accessoryState == HIGH)
+  currentStatus.accessoryState = readPin(AccessoryPin);  
+  if(currentStatus.accessoryState == HIGH)
   {
     // ACC On
-    digitalWrite(LEDPin, HIGH);
+    turnOnAccLed();
     // Poll Buttons
-    openCloseButtonState = digitalRead(OpenClosePin);
-    tiltButtonState = digitalRead(TiltPin);
-    if(openCloseButtonState == LOW)
+    currentStatus.openCloseButtonState = readPin(OpenClosePin);
+    currentStatus.tiltButtonState = readPin(TiltPin);
+    if(currentStatus.openCloseButtonState == LOW)
     {
-      Serial.println("Accessory Power: ON ");
-      Serial.println("Open/Close button pressed...");
+      serialPrintLn("Accessory Power: ON ");
+      serialPrintLn("Open/Close button pressed...");
       
-      int currentPosition = readSensor();
-      Serial.print("Current Position: "); Serial.println(currentPosition);
-      if(ClosedPositionMin <= currentPosition && currentPosition <= ClosedPositionMax)
+      if(isLidClosed())
       {
         // if lid is closed, open it.
-        openLid();
+        currentStatus.lidStatus = openLid();
       }
       else 
       {  
         // else is open or tilted, close it.      
-        closeLid();
+        currentStatus.lidStatus = closeLid();
       }
     }
-    if(tiltButtonState == LOW && lidStatus != ClosedStatus)
+    
+    if(currentStatus.tiltButtonState == LOW && isLidOpen())
     {
-      Serial.println("Accessory Power: ON ");
-      Serial.println("Tilt button pressed...");
+      serialPrintLn("Accessory Power: ON ");
+      serialPrintLn("Tilt button pressed...");
       // if lid is open, tilt it.
-      tiltLid();
+      currentStatus.lidStatus = tiltLid(currentStatus.lidStatus);
+      delay(500); // Add small delay to prevent double triggering. (poor's man debouncer)
     }
   }  
   idle();
-}
-
-/// Moves the lid forward.
-void moveForward()
-{
-  digitalWrite(BackwardsPin, LOW);
-  digitalWrite(ForwardPin, HIGH);
-}
-
-/// Moves the lid backwards
-void moveBackwards()
-{
-  digitalWrite(ForwardPin, LOW);
-  digitalWrite(BackwardsPin, HIGH);
-}
-
-/// Stops the motor movement.
-void stopMovement()
-{
-  digitalWrite(ForwardPin, LOW);
-  digitalWrite(BackwardsPin, LOW);
-}
-
-/// Saves the current status into eeprom
-void saveCurrentStatus()
-{
-  Serial.println("Saving settings... ");
-  // writes status to eeprom when car is off.
-  EEPROM.write(OldLidStatusAddress, oldLidStatus);
-  Serial.print("Current Lid Status: ");
-  Serial.println(oldLidStatus);
-  Serial.println("Complete. ");  
-}
-
-/// Loads previous status into eeprom
-void loadPreviousStatus()
-{
-  Serial.println("Loading settings... ");
-  // reads the old lid status when the arduino is powered.
-  oldLidStatus = EEPROM.read(OldLidStatusAddress);
-  Serial.print("Previous lid Status: ");
-  Serial.println(oldLidStatus);
-  Serial.println("Complete. ");  
-}
-
-/// Reads the lid position sensor, detecting its location.
-int readSensor()
-{
-  return analogRead(SensorPin);
-}
-
-/// Closes the lid if its opened or tilted.
-void closeLid()
-{
-  Serial.println("Closing Lid...");
-  int newPosition = readSensor();
-  while(OpenPositionMin <= newPosition && newPosition <= ClosedPositionMin)
-  {
-    moveForward();
-    newPosition = readSensor();
-    //Serial.print("New Position: "); Serial.println(newPosition);
-  }
-  stopMovement();   
-  oldPosition = newPosition;
-  lidStatus = ClosedStatus;
-  Serial.println("Complete");
-}
-
-/// Opens the lid if its closed
-void openLid()
-{
-  Serial.println("Opening Lid...");
-  int newPosition = readSensor();
-  while(OpenPositionMax <= newPosition && newPosition <= ClosedPositionMax)
-  {
-    moveBackwards();
-    newPosition = readSensor();
-    //Serial.print("New Position: "); Serial.println(newPosition);
-  }
-  stopMovement();
-  oldPosition = newPosition; 
-  lidStatus = OpenStatus;
-  Serial.println("Complete");
 }
 
 // When ignition is turned on check for previous state, if the screen was opened
@@ -218,111 +114,44 @@ void openLid()
 void idle()
 {
   // check if ACC is different from previous status
-  if(oldAccessoryState != accessoryState)
+  if(currentStatus.oldAccessoryState != currentStatus.accessoryState)
   {    
-    if(accessoryState == HIGH)
+    if(currentStatus.accessoryState == HIGH)
     {
-      Serial.println("Accessory Power: ON ");
+      serialPrintLn("Accessory Power: ON ");
       // Ignition is on
-      if(oldLidStatus == Tilt0Status ||
-         oldLidStatus == Tilt1Status ||
-         oldLidStatus == Tilt2Status ||
-         oldLidStatus == OpenStatus)
+      if(currentStatus.oldLidStatus == Tilt0Status ||
+         currentStatus.oldLidStatus == Tilt1Status ||
+         currentStatus.oldLidStatus == Tilt2Status ||
+         currentStatus.oldLidStatus == OpenStatus)
       {
-        Serial.println("Previous lid state: opened...");
         delay(3000);
+        serialPrintLn("Previous lid state: opened...");
         // If car is turned on and lid was open before, open it again.
-        openLid();
+        currentStatus.lidStatus = openLid();
       }
     }
     else
     {
-      // Wait a bit to confirm the car is really off instead of being started.      
+      // Wait a bit to confirm the car is really off instead of being started. (when cranking ACC goes 0v for some seconds)      
       delay(3000);
       // Read the pin again to confirm the car is off.
-      accessoryState = digitalRead(AccessoryPin);
-      if(accessoryState == LOW)
+      currentStatus.accessoryState = readPin(AccessoryPin);
+      if(currentStatus.accessoryState == LOW)
       {
-        Serial.println("Accessory Power: OFF ");
+        serialPrintLn("Accessory Power: OFF ");
         // The car has been turned off.
-        digitalWrite(LEDPin, LOW);
-        oldLidStatus = lidStatus;      
-        if(lidStatus != ClosedStatus)
+        turnOffAccLed();
+        // Keep current status as the old status
+        currentStatus.oldLidStatus = currentStatus.lidStatus;  
+        if(isLidOpen())
         {        
           // If car is turned off and lid is open, close lid.
-          closeLid();
+          currentStatus.lidStatus = closeLid();
         }
-        Serial.print("Saving current status...");   
-        saveCurrentStatus();
-        Serial.println("Complete."); 
+        saveCurrentStatus(currentStatus.oldLidStatus);
       }      
     }    
   }  
-  oldAccessoryState = accessoryState;    
-}
-
-/// Tilts the lid to any of the 3 possible positions. 
-/// The lid needs to be opened for the tilting to work.
-void tiltLid()
-{
-  Serial.println("Tilting Lid...");
-  Serial.print("Current Status: "); Serial.println(lidStatus);  
-  int currentStatus = lidStatus;
-  int minPosition = 0;
-  int maxPosition = 0;
-  int movementDirection = 0;
-  
-  switch(currentStatus){
-    case Tilt0Status:
-      minPosition = OpenPositionMin;
-      maxPosition = tilt1PositionMin;
-      lidStatus = Tilt1Status;
-      movementDirection = ForwardMovement;
-      Serial.print("Moving: "); Serial.println(movementDirection);   
-      break;
-    case Tilt1Status:
-      minPosition = OpenPositionMin;
-      maxPosition = tilt2PositionMin;
-      lidStatus = Tilt2Status;
-      movementDirection = ForwardMovement;
-      Serial.print("Moving: "); Serial.println(movementDirection);
-      break;
-    case Tilt2Status:
-      minPosition = OpenPositionMax;
-      maxPosition = ClosedPositionMax;
-      lidStatus = OpenStatus;
-      movementDirection = BackwardsMovement;
-      Serial.print("Moving: "); Serial.println(movementDirection);
-      break;  
-    case OpenStatus:
-    default:
-      minPosition = OpenPositionMin;
-      maxPosition = tilt0PositionMin;
-      lidStatus = Tilt0Status;
-      movementDirection = ForwardMovement;
-      Serial.print("Moving: "); Serial.println(movementDirection);
-      break;
-  }
-  
-  int currentPosition = readSensor();  
-  while(minPosition <= currentPosition && currentPosition <= maxPosition)
-  {
-    if(movementDirection == ForwardMovement)
-    {
-      moveForward();
-    } 
-    else
-    {
-      moveBackwards();
-    }    
-    currentPosition = readSensor();
-    // Serial.print("New Position: "); Serial.println(currentPosition);
-  }
-  stopMovement();
-  currentPosition = readSensor();
-  Serial.print("New Position: "); Serial.println(currentPosition);
-  Serial.print("New Status: "); Serial.println(lidStatus);  
-  oldPosition = currentPosition; 
-  Serial.println("Complete");
-  delay(500);
+  currentStatus.oldAccessoryState = currentStatus.accessoryState; // Keep track of accessory state
 }

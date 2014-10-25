@@ -14,12 +14,30 @@ The circuit:
 * 1 Motor (included in stock nav enclosure)
 
 
+Change Log
+----------
+
+24 October 2014
+* Refactored code to remove redundant calls. 
+* Split into various files to improve readability.
+
+22 March 2014
+* Initial version.
+
+
 Todo
 ----
 
-In the meantime this code is a work in progress. Until I test it out completely, is not yet safe to be used (unless you want to contribute)
-I will be updating the code until it replicates the stock functionality as close as possible.
+Update; 10/24/2014
+I'm pleased to report the code has been working great so far. I've been using it for months already without running into issues.
+
+Although, from the experience I have learned that a better circuit needs to be made to avoid wasting power. With that in mind, implementing the sleep functionality into the Arduino is my next step. In the hopes of reducing its power consumption.
+
+Through testing I have discovered it wastes ~90mA while being powered on. It looks like nothing, but consider that the whole car uses only about ~40mA while off!!
+
+
 
 I will provide some links, videos, and walkthroughs on how to add a tablet to your car.
+
 
 Happy driving!
