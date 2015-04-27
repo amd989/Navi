@@ -37,6 +37,7 @@ int moveLid(int minPosition, int maxPosition, int movementDirection, int newLidS
   {
     if(movementDirection == ForwardMovement)
     {
+      serialPrintLn("P: ", currentPosition);
       moveForward();
     } 
     else
@@ -80,7 +81,7 @@ int openLid()
 }
 
 // Opens the lid to the specified status.
-void openLid(int newLidStatus)
+int openLid(int newLidStatus)
 {
   serialPrintLn("Opening Lid to defined Status...");  
   // Gets the destination position for the new specified status
@@ -89,6 +90,7 @@ void openLid(int newLidStatus)
   // Move Lid
   moveLid(lidPosition.MaxPosition, ClosedPositionMax, BackwardsMovement, newLidStatus);    
   serialPrintLn("Complete");
+  return newLidStatus;
 }
 
 /// Tilts the lid to any of the 3 possible positions. 

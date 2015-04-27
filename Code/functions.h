@@ -3,20 +3,20 @@ const int ForwardMovement     = 0;
 const int BackwardsMovement   = 1;
 
 // Thresholds for positions.
-const int OpenPositionMin     = 145;
-const int OpenPositionMax     = 166;
+const int OpenPositionMin     = 100;
+const int OpenPositionMax     = 205;
 
-const int ClosedPositionMin   = 970;
-const int ClosedPositionMax   = 990;
+const int ClosedPositionMin   = 1005;
+const int ClosedPositionMax   = 1024;
 
-const int tilt0PositionMin    = 195;
-const int tilt0PositionMax    = 205;
+const int tilt0PositionMin    = 240; // 195;
+const int tilt0PositionMax    = 250; // 205;
 
-const int tilt1PositionMin    = 255;
-const int tilt1PositionMax    = 265;
+const int tilt1PositionMin    = 300; // 255;
+const int tilt1PositionMax    = 310; // 265;
 
-const int tilt2PositionMin    = 330;   // 90 degrees
-const int tilt2PositionMax    = 340;
+const int tilt2PositionMin    = 375; // 330;   // 90 degrees
+const int tilt2PositionMax    = 385; // 340;
 
 // Status
 const int ClosedStatus        = 0;

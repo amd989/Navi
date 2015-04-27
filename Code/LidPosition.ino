@@ -58,6 +58,11 @@ LidPosition getNextTiltedStatusPositions(int currentLidStatus)
       break;
   }
   serialPrintLn("Moving: ", lidPosition.MovementDirection);
+  serialPrintLn("Moving to Status: ", lidPosition.LidStatus);  
+  serialPrintLn("MinPosition : ", lidPosition.MinPosition);    
+  serialPrintLn("MaxPosition : ", lidPosition.MaxPosition);
+  
+  return lidPosition;
 }
 
 /// Checks whether the lid is closer or not.

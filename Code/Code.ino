@@ -35,7 +35,7 @@ const int ForwardPin      = 4;
 const int BackwardsPin    = 5;
 const int OpenClosePin    = 2;
 const int TiltPin         = 3;
-const int AccessoryPin    = 6;
+const int AccessoryPin    = 8;
 const int LEDPin          = 13;
 
 // Handles Status
@@ -86,8 +86,8 @@ void loop() {
       
       if(isLidClosed())
       {
-        // if lid is closed, open it.
-        currentStatus.lidStatus = openLid();
+        // if lid is closed, open it.        
+        currentStatus.lidStatus = openLid(OpenStatus);
       }
       else 
       {  
@@ -101,8 +101,8 @@ void loop() {
       serialPrintLn("Accessory Power: ON ");
       serialPrintLn("Tilt button pressed...");
       // if lid is open, tilt it.
-      currentStatus.lidStatus = tiltLid(currentStatus.lidStatus);
-      delay(500); // Add small delay to prevent double triggering. (poor's man debouncer)
+      currentStatus.lidStatus = tiltLid(currentStatus.lidStatus);      
+      delay(250); // Add small delay to prevent double triggering. (poor's man debouncer)
     }
   }  
   idle();
@@ -128,7 +128,7 @@ void idle()
         delay(3000);
         serialPrintLn("Previous lid state: opened...");
         // If car is turned on and lid was open before, open it again.
-        currentStatus.lidStatus = openLid();
+        currentStatus.lidStatus = openLid(currentStatus.oldLidStatus);
       }
     }
     else

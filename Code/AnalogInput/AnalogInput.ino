@@ -31,8 +31,8 @@ int sensorPin = A0;    // select the input pin for the potentiometer
 int ledPin = 13;      // select the pin for the LED
 int sensorValue = 0;  // variable to store the value coming from the sensor
 
-vxoid setup() {
-  Serial.begin(9600);
+void setup() {
+  Serial.begin(57600);
   // declare the ledPin as an OUTPUT:
   pinMode(ledPin, OUTPUT);  
 }
